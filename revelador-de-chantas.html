@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Revelador de chantas</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#12202b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Chantas">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#dfe5e8; --paper:#ffffff; --ink:#12202b; --mute:#5d6b76; --line:#c3ccd2;
+  --bad:#d4145a; --badbg:#fde3ec; --amb:#a35f00; --ambbg:#fcefd0;
+  --ok:#0b7a6b; --okbg:#d7f0eb; --info:#2a5d8f; --infobg:#dfeaf5; --mark:#fff04d;
+  --head:Impact,Haettenschweiler,"Arial Narrow Bold","Franklin Gothic Medium",sans-serif;
+  --body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --num:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#0e1820; --paper:#16242e; --ink:#e6eef2; --mute:#97a8b3; --line:#2c3e4b;
+  --bad:#ff6b9a; --badbg:#3a1626; --amb:#f0b34a; --ambbg:#392a0c;
+  --ok:#5fd4c0; --okbg:#0f3430; --info:#8fbbe8; --infobg:#142b40; --mark:#6b6200;
+}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 var(--body);padding-bottom:60px}
+.wrap{max-width:760px;margin:0 auto;padding:0 14px}
+header{padding:22px 0 10px}
+h1{font:400 clamp(34px,9vw,52px)/.95 var(--head);margin:0;letter-spacing:.5px;display:flex;align-items:center;gap:12px}
+h1 svg{flex:none;width:.95em;height:.95em}
+h1 span{background:linear-gradient(transparent 55%,var(--mark) 55%,var(--mark) 92%,transparent 92%);padding:0 4px}
+.lead{margin:8px 0 0;color:var(--mute);max-width:52ch}
+nav{display:flex;gap:6px;position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 0;border-bottom:1px solid var(--line);overflow-x:auto}
+nav button{flex:1 0 auto;border:1.5px solid var(--ink);background:transparent;color:var(--ink);padding:9px 12px;font:600 14px var(--body);border-radius:6px;cursor:pointer;white-space:nowrap}
+nav button[aria-selected=true]{background:var(--ink);color:var(--bg)}
+nav .badge{display:inline-block;min-width:20px;padding:0 6px;margin-left:6px;border-radius:10px;background:var(--bad);color:#fff;font-size:12px;line-height:20px}
+section{display:none;padding-top:16px}
+section.on{display:block}
+.slip{background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:14px;margin-bottom:14px;position:relative}
+.slip.cut{border-top:2px dashed var(--ink);border-radius:0 0 4px 4px}
+h2{font:400 26px/1 var(--head);margin:0 0 12px;letter-spacing:.3px}
+h3{font:700 15px var(--body);margin:0 0 8px}
+label{display:block;font:600 13px var(--body);margin:0 0 4px;color:var(--mute)}
+input,select{width:100%;font:16px var(--body);color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:6px;padding:10px;min-height:44px}
+input:focus,select:focus,button:focus-visible{outline:3px solid var(--info);outline-offset:1px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:420px){.g2{grid-template-columns:1fr}}
+.row{display:grid;grid-template-columns:1fr 1fr 80px 44px;gap:8px;align-items:end;padding:10px 0;border-top:1px dashed var(--line)}
+.row .artw{grid-column:1/-1;position:relative}
+.sug{position:absolute;top:100%;left:0;right:0;z-index:10;background:var(--paper);border:1.5px solid var(--ink);border-radius:6px;margin-top:2px;box-shadow:0 8px 24px rgba(0,0,0,.25);overflow:hidden}
+.sug[hidden]{display:none}
+.si{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 12px;border-bottom:1px dashed var(--line);cursor:pointer;min-height:44px}
+.si:last-child{border-bottom:0}
+.si.on,.si:hover{background:var(--mark)}
+.row .pre.auto{background:var(--ambbg);border-style:dashed;border-color:var(--amb);font-style:italic}
+.vs{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:center;margin:8px 0 6px;padding:8px 10px;background:var(--bg);border-radius:4px}
+.vs>div{display:flex;flex-direction:column}.vs b{font-size:16px}
+.vs .df{font:700 15px var(--num);text-align:right}
+.si small{color:var(--mute);font:12px var(--num);flex:none}
+.si.nota{cursor:default;color:var(--mute);font-size:13px}.si.nota:hover{background:transparent}
+textarea{width:100%;font:15px/1.4 var(--body);color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:6px;padding:10px;resize:vertical}
+textarea:focus{outline:3px solid var(--info);outline-offset:1px}
+.row .pre,.row .can{font-family:var(--num)}
+.row .hint{grid-column:1/-1;font-size:13px;min-height:0}
+.row .x{min-height:44px;border:1.5px solid var(--line);background:transparent;color:var(--mute);border-radius:6px;font-size:22px;cursor:pointer}
+.row .pre{grid-column:1/3}
+.row .can{grid-column:3}
+.row .x{grid-column:4}
+.btn{border:0;border-radius:6px;padding:12px 16px;font:700 15px var(--body);cursor:pointer;background:var(--ink);color:var(--bg)}
+.btn.sec{background:transparent;color:var(--ink);border:1.5px solid var(--ink)}
+.btn.warn{background:transparent;color:var(--bad);border:1.5px solid var(--bad)}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.mute{color:var(--mute)} .small{font-size:13px}
+.ok{color:var(--ok);font-weight:700} .bad{color:var(--bad);font-weight:700} .amb{color:var(--amb);font-weight:700}
+.num{font-family:var(--num)}
+.card{background:var(--paper);border:1px solid var(--line);border-left:6px solid var(--ok);border-radius:4px;padding:12px;margin-bottom:10px}
+.card.sev1{border-left-color:var(--info)} .card.sev2{border-left-color:var(--amb)} .card.sev3{border-left-color:var(--bad)}
+.ch{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.tag{font:400 15px/1 var(--head);padding:5px 8px;border:2px solid currentColor;border-radius:3px;transform:rotate(-4deg);letter-spacing:.5px;flex:none}
+.t0{color:var(--ok)} .t1{color:var(--info)} .t2{color:var(--amb)} .t3{color:var(--bad)}
+.cm{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:8px 0 4px}
+.pr{font:16px var(--num)}
+.spark{width:120px;height:34px;display:block}
+.fl{margin-top:6px;padding:6px 8px;border-radius:4px;font-size:14px}
+.f3{background:var(--badbg);color:var(--bad)} .f2{background:var(--ambbg);color:var(--amb)}
+.f1{background:var(--infobg);color:var(--info)} .f0{background:var(--okbg);color:var(--ok)}
+details{margin-top:8px} summary{cursor:pointer;font-size:13px;color:var(--mute)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:6px 4px;border-bottom:1px dashed var(--line)}
+th{font-weight:700;color:var(--mute)}
+td.n,th.n{text-align:right;font-family:var(--num)}
+.scroll{overflow-x:auto}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:12px}
+.bar>div{flex:1 1 150px}
+.chk{display:flex;gap:8px;align-items:center;font-weight:600;font-size:14px;margin:6px 0}
+.chk input{width:22px;min-height:22px;height:22px}
+.empty{text-align:center;padding:26px 10px;color:var(--mute)}
+.hgroup{margin-bottom:12px}
+.hgroup .hh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
+.mini{border:0;background:transparent;color:var(--bad);font-size:20px;cursor:pointer;padding:4px 8px;min-height:36px}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:6px;font-weight:600;font-size:14px;z-index:30;display:none;max-width:90vw}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:20;display:none;align-items:flex-end;justify-content:center}
+.modal.on{display:flex}
+.sheet{background:var(--paper);width:100%;max-width:640px;max-height:88vh;overflow:auto;border-radius:12px 12px 0 0;padding:18px 16px 24px}
+@media(min-width:700px){.modal{align-items:center}.sheet{border-radius:12px}}
+.sum{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.sum div{flex:1 1 90px;background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:8px 10px}
+.sum b{display:block;font:400 28px/1 var(--head)}
+@media(prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>
+    <svg viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"><circle cx="20" cy="20" r="13"/><path d="M30 30l13 13"/><path d="M14 20h12M20 14v12" stroke-width="3"/></svg>
+    <span>Revelador de chantas</span>
+  </h1>
+  <p class="lead">Anotá lo que pagás en cada almacén. Si un precio sube más de lo que sube el mercado, o sube y sube, te avisamos.</p>
+</header>
+
+<nav role="tablist">
+  <button role="tab" aria-selected="true" data-tab="compra">Nueva compra</button>
+  <button role="tab" aria-selected="false" data-tab="comparar">Comparar<span class="badge" id="badge" hidden>0</span></button>
+  <button role="tab" aria-selected="false" data-tab="historial">Historial</button>
+  <button role="tab" aria-selected="false" data-tab="excel">Excel y ajustes</button>
+</nav>
+
+<!-- NUEVA COMPRA -->
+<section id="s-compra" class="on">
+  <div class="slip">
+    <h2>Lo que compré hoy</h2>
+    <div class="g2">
+      <div><label for="almacen">Almacén</label><input id="almacen" list="dlStore" placeholder="Ej: Don Pepe" autocomplete="off"></div>
+      <div><label for="fecha">Fecha</label><input id="fecha" type="date"></div>
+    </div>
+    <p class="mute small" style="margin:10px 0 0">Anotá el <b>precio de una unidad</b> y escribí siempre el artículo igual, con su presentación (ej: «Arroz 1 kg»). Así se comparan bien.</p>
+    <div id="rows"></div>
+    <div class="btns">
+      <button class="btn sec" id="addRow" type="button">+ Otro artículo</button>
+      <button class="btn" id="saveBtn" type="button">Guardar y comparar</button>
+    </div>
+  </div>
+</section>
+
+<!-- COMPARAR -->
+<section id="s-comparar">
+  <div class="sum" id="sum"></div>
+  <div class="slip">
+    <div class="bar">
+      <div><label for="fStore">Almacén</label><select id="fStore"></select></div>
+      <div><label class="chk" style="margin:0"><input type="checkbox" id="fOnly"> Solo con alertas</label></div>
+    </div>
+    <details><summary>¿Cómo se detecta un chanta?</summary>
+      <p class="small">Se calcula cuánto debería haber subido cada precio por el mercado en esos días (la inflación mensual de referencia, que podés ajustar en «Excel y ajustes»). Se marca cuando:</p>
+      <ul class="small" style="margin:0;padding-left:20px">
+        <li>la última subida supera lo esperado por más de la tolerancia;</li>
+        <li>un artículo sube en la mayoría de tus compras y el acumulado se pasa del mercado (patrón de aumentos);</li>
+        <li>el mismo día figuran dos precios distintos;</li>
+        <li>el precio sube y baja de forma errática.</li>
+      </ul>
+      <p class="small">Una suba parecida a la del mercado no se marca como sospechosa.</p>
+    </details>
+  </div>
+  <div id="stores"></div>
+  <div id="cards"></div>
+</section>
+
+<!-- HISTORIAL -->
+<section id="s-historial"><div id="hist"></div></section>
+
+<!-- EXCEL Y AJUSTES -->
+<section id="s-excel">
+  <div class="slip">
+    <h2>Tabla de Excel</h2>
+    <p class="mute small" style="margin-top:0">El Excel tiene tres hojas: <b>Compras</b> (todo lo que anotaste), <b>Comparación</b> (cada artículo en cada almacén) y <b>Alertas</b> (solo lo sospechoso). Para actualizarlo, abrí tu Excel anterior y sumá compras nuevas.</p>
+    <div class="btns">
+      <button class="btn" id="expX" type="button">Descargar Excel</button>
+      <button class="btn sec" id="impBtn" type="button">Abrir Excel anterior</button>
+      <button class="btn sec" id="expC" type="button">Descargar CSV</button>
+    </div>
+    <input type="file" id="impFile" accept=".xlsx,.xls,.csv" hidden>
+  </div>
+  <div class="slip">
+    <h2>Ajustes de comparación</h2>
+    <div class="g2">
+      <div><label for="cRef">Inflación mensual de referencia (%)</label><input id="cRef" type="number" inputmode="decimal" step="0.1" min="0"></div>
+      <div><label for="cTol">Tolerancia (puntos %)</label><input id="cTol" type="number" inputmode="decimal" step="0.5" min="0"></div>
+    </div>
+    <label class="chk" style="margin-top:12px"><input type="checkbox" id="cMed"> Usar la mediana de mis propios datos como referencia</label>
+    <p class="mute small" id="medInfo" style="margin:0"></p>
+    <p class="mute small">La tolerancia es cuánto por encima del mercado se perdona antes de marcar una suba.</p>
+  </div>
+  <div class="slip">
+    <h2>Catálogo de productos</h2>
+    <p class="mute small" style="margin-top:0">Al escribir un artículo te sugiere los que ya compraste, los del catálogo oficial del Ministerio de Economía y Finanzas (SIPC), con su precio de referencia, y, con internet, los de un catálogo online. Todo lo que anotás entra solo al catálogo.</p>
+    <label class="chk"><input type="checkbox" id="cOnline"> Buscar también en el catálogo online (Open Food Facts)</label>
+    <p class="small" style="margin:12px 0 4px"><b>Precios de referencia:</b> <span id="refInfo"></span></p>
+    <div class="btns" style="margin-top:6px">
+      <button class="btn sec" id="refUpd" type="button">Actualizar desde precios.uy</button>
+      <button class="btn sec" id="refCsv" type="button">Cargar planilla CSV</button>
+    </div>
+    <input type="file" id="refFile" accept=".csv,text/csv" hidden>
+    <p class="mute small" style="margin:6px 0 0">Si el botón no puede conectarse, descargá la «planilla de precios» del último reporte mensual en precios.uy y cargala con el segundo botón.</p>
+    <label for="cCat" style="margin-top:10px">Mis productos (uno por línea: Producto | Marca | Presentación)</label>
+    <textarea id="cCat" rows="5" placeholder="Arroz | Green Chef | 1 kg"></textarea>
+  </div>
+  <div class="slip">
+    <h2>Datos</h2>
+    <p class="mute small" style="margin-top:0">Lo que anotás se guarda en este navegador. Descargá el Excel seguido para tener respaldo.</p>
+    <div class="btns">
+      <button class="btn sec" id="sample" type="button">Cargar datos de ejemplo</button>
+      <button class="btn warn" id="wipe" type="button">Borrar todo</button>
+    </div>
+  </div>
+</section>
+</div>
+
+<datalist id="dlStore"></datalist>
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+<div id="toast" role="status"></div>
+
+<script>
+const KEY='revelador_chantas_v1';
+let S={records:[],custom:'',cfg:{ref:1,tol:3,useMedian:false,online:true}};
+let cmpStore='',cmpOnly=false;
+
+/* ---------- utilidades ---------- */
+const $=s=>document.querySelector(s);
+const norm=s=>String(s).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ');
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=n=>'$'+Number(n).toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2});
+const pct=n=>(n>0?'+':'')+n.toFixed(1).replace('.',',')+'%';
+const pts=n=>(n>0?'+':'')+n.toFixed(1).replace('.',',');
+const pad=n=>String(n).padStart(2,'0');
+const isoDate=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const today=()=>isoDate(new Date());
+const fmtF=f=>f.split('-').reverse().join('/');
+const days=(a,b)=>Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+let toastT;
+function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toastT);toastT=setTimeout(()=>t.style.display='none',3200);}
+
+function load(){try{const r=localStorage.getItem(KEY);if(r){const o=JSON.parse(r);S.records=o.records||[];S.custom=o.custom||'';Object.assign(S.cfg,o.cfg||{});}}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast('No se pudo guardar en el navegador');}}
+
+/* ---------- análisis ---------- */
+function expectedPct(d,ref){return (Math.pow(1+ref/100,Math.max(d,0)/30)-1)*100;}
+
+function groupSeries(){
+  const m=new Map();
+  S.records.forEach(r=>{
+    const k=norm(r.almacen)+'|'+norm(r.articulo);
+    if(!m.has(k))m.set(k,{store:r.almacen,name:r.articulo,skey:norm(r.almacen),key:norm(r.articulo),pts:[]});
+    m.get(k).pts.push(r);
+  });
+  m.forEach(g=>{
+    g.pts.sort((a,b)=>a.fecha.localeCompare(b.fecha)||a.t-b.t);
+    const l=g.pts[g.pts.length-1];g.name=l.articulo;g.store=l.almacen;
+  });
+  return [...m.values()];
+}
+
+function medianRate(){
+  const rates=[];
+  groupSeries().forEach(s=>{
+    for(let i=1;i<s.pts.length;i++){
+      const d=days(s.pts[i-1].fecha,s.pts[i].fecha);
+      if(d>=7){rates.push(((s.pts[i].precio/s.pts[i-1].precio-1)*100)/(d/30));}
+    }
+  });
+  if(!rates.length)return null;
+  rates.sort((a,b)=>a-b);
+  const m=Math.floor(rates.length/2);
+  return rates.length%2?rates[m]:(rates[m-1]+rates[m])/2;
+}
+function refRate(){
+  if(S.cfg.useMedian){const m=medianRate();if(m!==null)return Math.max(m,0);}
+  return S.cfg.ref;
+}
+
+function analyze(){
+  const ref=refRate(),tol=S.cfg.tol;
+  const series=groupSeries();
+  series.forEach(s=>{
+    s.pairs=[];
+    for(let i=1;i<s.pts.length;i++){
+      const a=s.pts[i-1],b=s.pts[i],d=days(a.fecha,b.fecha);
+      const ch=(b.precio/a.precio-1)*100,ex=expectedPct(d,ref);
+      s.pairs.push({a,b,d,ch,ex,exc:ch-ex});
+    }
+    s.first=s.pts[0];s.last=s.pts[s.pts.length-1];
+    s.totalDays=days(s.first.fecha,s.last.fecha);
+    s.total=(s.last.precio/s.first.precio-1)*100;
+    s.expTotal=expectedPct(s.totalDays,ref);
+    s.excTotal=s.total-s.expTotal;
+    s.ups=s.pairs.filter(p=>p.ch>0.05).length;
+    s.downs=s.pairs.filter(p=>p.ch<-0.05).length;
+    s.flags=[];
+    const lp=s.pairs[s.pairs.length-1];
+    if(lp){
+      if(lp.d===0&&Math.abs(lp.ch)>0.05){
+        s.flags.push({type:'dia',sev:2,txt:'Dos precios distintos el mismo día ('+money(lp.a.precio)+' y '+money(lp.b.precio)+')'});
+      }else if(lp.ch>0.05&&lp.exc>tol){
+        s.flags.push({type:'ult',sev:lp.exc>tol*3?3:2,txt:'Última subida '+pct(lp.ch)+' en '+lp.d+' días; el mercado explica ≈'+pct(lp.ex)});
+      }
+    }
+    if(s.pairs.length>=3&&s.ups>=3&&s.ups/s.pairs.length>=0.6&&s.excTotal>tol){
+      s.flags.push({type:'rep',sev:(s.ups>=4&&s.excTotal>tol*2)?3:2,txt:'Subió en '+s.ups+' de '+s.pairs.length+' compras: acumulado '+pct(s.total)+' contra mercado ≈'+pct(s.expTotal)});
+    }
+    const moves=s.pairs.filter(p=>Math.abs(p.ch)>0.05).map(p=>Math.sign(p.ch));
+    let swings=0;for(let i=1;i<moves.length;i++)if(moves[i]!==moves[i-1])swings++;
+    const v=s.pts.map(x=>x.precio),range=(Math.max(...v)/Math.min(...v)-1)*100;
+    if(swings>=2&&range>tol){
+      s.flags.push({type:'vai',sev:1,txt:'El precio sube y baja de forma errática (rango '+range.toFixed(1).replace('.',',')+'%)'});
+    }
+    s.ref=refIndex().get(mnorm(s.name))||null;
+    if(s.ref){
+      s.refDiff=(s.last.precio/s.ref.med-1)*100;
+      if(s.last.precio>s.ref.p99)s.flags.push({type:'ref',sev:2,txt:'Último precio '+money(s.last.precio)+' por encima del 99% de los comercios del SIPC (tope '+money(s.ref.p99)+')'});
+    }
+    s.level=s.flags.reduce((m,f)=>Math.max(m,f.sev),0);
+  });
+  /* comparación con otros almacenes */
+  const byArt=new Map();
+  series.forEach(s=>{if(!byArt.has(s.key))byArt.set(s.key,[]);byArt.get(s.key).push(s);});
+  series.forEach(s=>{
+    const others=byArt.get(s.key).filter(o=>o!==s);
+    if(!others.length)return;
+    const best=others.reduce((a,b)=>b.last.precio<a.last.precio?b:a);
+    if(s.last.precio>best.last.precio*1.10){
+      s.note='Más barato en '+best.store+': '+money(best.last.precio)+' (el último registro acá es '+money(s.last.precio)+')';
+    }
+  });
+  return series;
+}
+
+function lastRecord(store,art,fmax){
+  const sk=norm(store),ak=norm(art);let best=null;
+  S.records.forEach(r=>{
+    if(norm(r.almacen)===sk&&norm(r.articulo)===ak&&r.fecha<=fmax){
+      if(!best||r.fecha>best.fecha||(r.fecha===best.fecha&&r.t>best.t))best=r;
+    }
+  });
+  return best;
+}
+
+/* ---------- formulario ---------- */
+function addRow(focus){
+  const d=document.createElement('div');d.className='row';
+  d.innerHTML='<div class="artw"><input class="art" placeholder="Artículo (ej: Arr…)" autocomplete="off" aria-label="Artículo"><div class="sug" role="listbox" hidden></div></div>'+
+    '<input class="pre" type="number" inputmode="decimal" step="0.01" min="0" placeholder="Precio unitario" aria-label="Precio unitario">'+
+    '<input class="can" type="number" inputmode="decimal" step="0.01" min="0" value="1" aria-label="Cantidad">'+
+    '<button class="x" type="button" aria-label="Quitar artículo">×</button><div class="hint"></div>';
+  $('#rows').appendChild(d);
+  if(focus)d.querySelector('.art').focus();
+}
+function refText(label,pre){
+  const rf=refIndex().get(mnorm(label));
+  if(!rf)return '';
+  let t='Referencia SIPC ('+mesCorto(rf.mes)+'): <b class="num">'+money(rf.med)+'</b> <span class="mute">(rango '+money(rf.p1)+' a '+money(rf.p99)+')</span>';
+  if(!isNaN(pre)&&pre>0){
+    const d=(pre/rf.med-1)*100;
+    if(pre>rf.p99)t+=' · <span class="bad">'+pct(d)+': más caro que el 99% de los comercios</span>';
+    else if(Math.abs(d)<0.5)t+=' · <span class="ok">igual a la referencia</span>';
+    else if(d<0)t+=' · <span class="ok">'+pct(d)+' vs referencia</span>';
+    else t+=' · <span class="amb">'+pct(d)+' vs referencia</span>';
+  }
+  return t;
+}
+function updateHint(row){
+  const store=$('#almacen').value.trim(),art=row.querySelector('.art').value.trim();
+  const pre=parseFloat(row.querySelector('.pre').value),f=$('#fecha').value||today();
+  const h=row.querySelector('.hint');h.innerHTML='';
+  if(!art)return;
+  const auto=row.dataset.auto==='1';
+  const rt=refText(art,auto?NaN:pre);
+  let t='';
+  const prev=store?lastRecord(store,art,f):null;
+  if(store){
+    if(!prev)t='<span class="mute">Primera vez que lo anotás en este almacén.</span>';
+    else{
+      t='Última vez: <b class="num">'+money(prev.precio)+'</b> ('+fmtF(prev.fecha)+')';
+      if(!auto&&!isNaN(pre)&&pre>0){
+        const ch=(pre/prev.precio-1)*100,ex=expectedPct(days(prev.fecha,f),refRate());
+        if(Math.abs(ch)<0.05)t+=' · <span class="ok">igual</span>';
+        else if(ch<0)t+=' · <span class="ok">bajó '+pct(ch)+'</span>';
+        else if(ch-ex>S.cfg.tol)t+=' · <span class="bad">subió '+pct(ch)+' (mercado ≈'+pct(ex)+')</span>';
+        else t+=' · <span class="amb">subió '+pct(ch)+', en línea con el mercado</span>';
+      }
+    }
+  }
+  if(auto)t+=(t?'<br>':'')+'<span class="amb">El precio es el de referencia: cambialo por el que pagás en el almacén.</span>';
+  h.innerHTML=[t,rt].filter(Boolean).join('<br>');
+}
+function refreshLists(){
+  const stores=new Map(),arts=new Map();
+  S.records.forEach(r=>{stores.set(norm(r.almacen),r.almacen);arts.set(norm(r.articulo),r.articulo);});
+  $('#dlStore').innerHTML=[...stores.values()].map(v=>'<option value="'+esc(v)+'">').join('');
+}
+
+function saveCompra(){
+  const store=$('#almacen').value.trim(),fecha=$('#fecha').value;
+  if(!store||!fecha){toast('Falta el almacén o la fecha');return;}
+  const rows=[...document.querySelectorAll('#rows .row')].map(r=>({
+    art:r.querySelector('.art').value.trim(),
+    pre:parseFloat(r.querySelector('.pre').value),
+    can:parseFloat(r.querySelector('.can').value)||1,
+    mar:r.dataset.marca||'',
+    auto:r.dataset.auto==='1'
+  })).filter(r=>r.art||!isNaN(r.pre));
+  if(!rows.length){toast('Agregá al menos un artículo');return;}
+  if(rows.some(r=>!r.art||isNaN(r.pre)||r.pre<=0)){toast('Completá artículo y precio en todas las filas');return;}
+  const sinTocar=rows.filter(r=>r.auto);
+  if(sinTocar.length&&!confirm('Estos precios son los de referencia (autocompletados), no los del almacén:\n\n'+sinTocar.map(r=>'• '+r.art).join('\n')+'\n\n¿Guardar igual?'))return;
+  let t=Date.now();const ids=[];
+  rows.forEach(r=>{
+    const id=uid();ids.push(id);
+    let marca=r.mar;
+    if(!marca){const h=S.records.find(x=>norm(x.articulo)===norm(r.art)&&x.marca);if(h)marca=h.marca;}
+    const rf=refIndex().get(mnorm(r.art));
+    const rec={id,t:t++,fecha,almacen:store,articulo:r.art,marca:marca||'',cantidad:r.can,precio:r.pre};
+    if(rf){rec.ref=rf.med;rec.refMin=rf.p1;rec.refMax=rf.p99;rec.refMes=rf.mes;}
+    S.records.push(rec);
+  });
+  save();
+  const A=analyze(),items=[];
+  rows.forEach((r,i)=>{
+    const s=A.find(x=>x.skey===norm(store)&&x.key===norm(r.art));
+    const pair=s&&s.pairs.find(p=>p.b.id===ids[i]);
+    if(!pair){items.push({sev:0,txt:'<b>'+esc(r.art)+'</b>: primer registro en '+esc(store)+' ('+money(r.pre)+')'});}
+    else{
+      const head='<b>'+esc(r.art)+'</b>: '+money(pair.a.precio)+' → '+money(pair.b.precio);
+      if(Math.abs(pair.ch)<=0.05)items.push({sev:0,txt:head+' · sin cambios'});
+      else if(pair.ch<0)items.push({sev:0,txt:head+' · bajó '+pct(pair.ch)});
+      else if(pair.exc<=S.cfg.tol)items.push({sev:1,txt:head+' · subió '+pct(pair.ch)+' en '+pair.d+' días; el mercado explica ≈'+pct(pair.ex)});
+      else items.push({sev:pair.exc>S.cfg.tol*3?3:2,txt:head+' · subió '+pct(pair.ch)+' en '+pair.d+' días; el mercado explica ≈'+pct(pair.ex)});
+    }
+    if(s)s.flags.filter(f=>f.type!=='ult'&&f.type!=='ref').forEach(f=>items.push({sev:f.sev,txt:'<b>'+esc(r.art)+'</b>: '+esc(f.txt)}));
+    const rf=refIndex().get(mnorm(r.art));
+    if(rf){
+      const d=(r.pre/rf.med-1)*100;
+      if(r.pre>rf.p99)items.push({sev:2,txt:'<b>'+esc(r.art)+'</b>: '+money(r.pre)+' contra una referencia SIPC de '+money(rf.med)+' ('+pct(d)+'). Es más caro que el 99% de los comercios relevados.'});
+      else items.push({sev:0,txt:'<b>'+esc(r.art)+'</b>: '+money(r.pre)+' vs referencia SIPC '+money(rf.med)+' ('+pct(d)+')'});
+    }
+  });
+  items.sort((a,b)=>b.sev-a.sev);
+  showResult(store,items);
+  document.querySelectorAll('#rows .row').forEach(r=>r.remove());addRow(false);
+  refreshAll();
+}
+function showResult(store,items){
+  const alert=items.filter(i=>i.sev>=2).length;
+  const cls=['f0','f1','f2','f3'];
+  $('#sheet').innerHTML='<h2>'+(alert?'Hay '+alert+' precio'+(alert>1?'s':'')+' para mirar':'Todo en orden')+'</h2>'+
+    '<p class="mute small" style="margin-top:0">Compra guardada en '+esc(store)+'.</p>'+
+    items.map(i=>'<div class="fl '+cls[i.sev]+'">'+i.txt+'</div>').join('')+
+    '<div class="btns"><button class="btn" id="closeM" type="button">Entendido</button></div>';
+  $('#modal').classList.add('on');
+  $('#closeM').onclick=()=>$('#modal').classList.remove('on');
+  if(alert&&navigator.vibrate)try{navigator.vibrate([120,60,120]);}catch(e){}
+}
+
+/* ---------- vista comparar ---------- */
+function spark(p){
+  const w=120,h=34,m=3,v=p.map(x=>x.precio),mn=Math.min(...v),mx=Math.max(...v),r=mx-mn||1;
+  const X=i=>p.length===1?w/2:m+i*(w-2*m)/(p.length-1);
+  const Y=x=>h-m-(x-mn)/r*(h-2*m);
+  const d=v.map((x,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(x).toFixed(1)).join(' ');
+  const l=v.length-1;
+  return '<svg class="spark" viewBox="0 0 '+w+' '+h+'" aria-hidden="true"><path d="'+d+'" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="'+X(l).toFixed(1)+'" cy="'+Y(v[l]).toFixed(1)+'" r="2.8" fill="currentColor"/></svg>';
+}
+function cardHTML(s){
+  const lab=['Sin alerta','Baja','Media','Alta'][s.level];
+  const hist='<details><summary>Ver historial</summary><div class="scroll"><table><tr><th>Fecha</th><th class="n">Precio</th><th class="n">Cambio</th></tr>'+
+    s.pts.map((p,i)=>{const c=i?((p.precio/s.pts[i-1].precio-1)*100):null;
+      return '<tr><td>'+fmtF(p.fecha)+'</td><td class="n">'+money(p.precio)+'</td><td class="n">'+(c===null?'–':(Math.abs(c)<0.05?'=':pct(c)))+'</td></tr>';}).join('')+
+    '</table></div></details>';
+  return '<div class="card sev'+s.level+'"><div class="ch"><div><b>'+esc(s.name)+'</b><div class="mute small">'+esc(s.store)+(s.last.marca?' · marca '+esc(s.last.marca):'')+' · '+s.pts.length+' registro'+(s.pts.length>1?'s':'')+'</div></div><span class="tag t'+s.level+'">'+lab+'</span></div>'+
+    '<div class="cm"><div class="pr">'+money(s.first.precio)+' → <b>'+money(s.last.precio)+'</b></div><div class="t'+s.level+'">'+spark(s.pts)+'</div></div>'+
+    (s.ref?'<div class="vs"><div><span class="mute small">En '+esc(s.store)+'</span><b class="num">'+money(s.last.precio)+'</b></div><div><span class="mute small">Referencia SIPC · '+mesCorto(s.ref.mes)+'</span><b class="num">'+money(s.ref.med)+'</b></div><div class="df '+(s.last.precio>s.ref.p99?'bad':(s.refDiff>0?'amb':'ok'))+'">'+pct(s.refDiff)+'</div></div>':'')+
+    '<div class="mute small">'+(s.pts.length>1?'Variación total <b>'+pct(s.total)+'</b> en '+s.totalDays+' días · mercado ≈'+pct(s.expTotal)+' · '+s.ups+' subidas, '+s.downs+' bajadas':'Un solo registro: falta otra compra para comparar')+'</div>'+
+    s.flags.map(f=>'<div class="fl f'+f.sev+'">'+esc(f.txt)+'</div>').join('')+
+    (s.note?'<div class="fl f1">'+esc(s.note)+'</div>':'')+hist+'</div>';
+}
+function renderCompare(){
+  const A=analyze();
+  const stores=[...new Map(A.map(s=>[s.skey,s.store])).entries()];
+  const sel=$('#fStore');
+  sel.innerHTML='<option value="">Todos</option>'+stores.map(([k,v])=>'<option value="'+esc(k)+'"'+(k===cmpStore?' selected':'')+'>'+esc(v)+'</option>').join('');
+  $('#fOnly').checked=cmpOnly;
+  const alerts=A.filter(s=>s.level>=2).length,high=A.filter(s=>s.level===3).length;
+  const b=$('#badge');b.hidden=!alerts;b.textContent=alerts;
+  $('#sum').innerHTML='<div><b>'+A.length+'</b><span class="mute small">artículos seguidos</span></div><div><b class="'+(alerts?'bad':'ok')+'">'+alerts+'</b><span class="mute small">con alerta</span></div><div><b class="'+(high?'bad':'ok')+'">'+high+'</b><span class="mute small">alerta alta</span></div>';
+  if(!A.length){$('#stores').innerHTML='';$('#cards').innerHTML='<div class="empty">Todavía no hay compras anotadas.<br>Cargá la primera en «Nueva compra».</div>';return;}
+  /* resumen por almacén */
+  const rows=stores.map(([k,v])=>{
+    const ss=A.filter(s=>s.skey===k),cmp=ss.filter(s=>s.pairs.length);
+    const avg=cmp.length?cmp.reduce((a,s)=>a+s.excTotal,0)/cmp.length:null;
+    return '<tr><td>'+esc(v)+'</td><td class="n">'+ss.length+'</td><td class="n">'+ss.filter(s=>s.level>=2).length+'</td><td class="n">'+(avg===null?'–':pts(avg))+'</td></tr>';
+  }).join('');
+  $('#stores').innerHTML='<div class="slip cut"><h3>Por almacén</h3><div class="scroll"><table><tr><th>Almacén</th><th class="n">Artíc.</th><th class="n">Alertas</th><th class="n">Exceso medio</th></tr>'+rows+'</table></div><p class="mute small" style="margin:8px 0 0">Exceso medio: puntos de aumento por encima del mercado, promedio de sus artículos.</p></div>';
+  let list=A.filter(s=>(!cmpStore||s.skey===cmpStore)&&(!cmpOnly||s.level>=1));
+  list.sort((a,b)=>b.level-a.level||b.excTotal-a.excTotal);
+  $('#cards').innerHTML=list.length?list.map(cardHTML).join(''):'<div class="empty">Nada para mostrar con ese filtro.</div>';
+}
+
+/* ---------- catálogo y sugerencias ---------- */
+const SIPC=`Aceite de maíz|Salad|900 cc
+Aceite de soja|Salad|900 cc
+Arroz blanco|Pony|1 kg
+Arvejas en conserva|Campero|300 g
+Fideos secos semolados|Puritas|500 g
+Gaseosa cola|Nix|1,5 L
+Helado familiar|Gebetto|1 L
+Manteca|Calcar|200 g
+Margarina|Flor|200 g
+Margarina|Primor|250 g
+Mayonesa común|Fanacoa|500 g
+Mermelada de durazno|Dulciora|500 g
+Pan de molde lacteado|Pan Catalán|330 g
+Pescado fresco (bifes de merluza)||1 kg
+Pollo entero fresco con menudos|Tenent|1 kg
+Leonesa|La Constancia|1 kg
+Pasta dental|Aquafresh|126 g
+Pasta dental|Oral-B|90 g
+Afeitadora|Prestobarba|2 un.
+Toallitas femeninas|Carefree Brisa sin perfume|60 un.
+Agua oxigenada 10 vol.|Droguería Paysandú|100 ml
+Acelga||atado
+Arvejas||1 kg
+Berenjena violeta||1 kg
+Berro||atado
+Boniato Arapey||1 kg
+Boniato morado||1 kg
+Brócoli||1 un.
+Cebolla seca||1 kg
+Cebolla de verdeo||1 kg
+Chaucha||1 kg
+Choclo||1 un.
+Coliflor||1 un.
+Espinaca||atado
+Morrón amarillo||1 kg
+Morrón rojo||1 kg
+Morrón verde||1 kg
+Nabo||1 un.
+Pepino||1 kg
+Puerro||1 un.
+Rabanito||atado
+Remolacha||atado
+Repollo blanco||1 un.
+Repollo colorado||1 kg
+Repollo crespo||1 kg
+Zanahoria||1 kg
+Zapallito redondo||1 kg
+Zapallito zuchini||1 kg
+Zapallo kabutiá||1 kg
+Ciruela blanca||1 kg
+Ciruela roja||1 kg
+Durazno Rey del Monte||1 kg
+Durazno Pavía||1 kg
+Frutilla||1 kg
+Kiwi Chile||1 kg
+Kiwi Nueva Zelanda||1 kg
+Limón||1 kg
+Mandarina Avana||1 kg
+Mandarina común||1 kg
+Mandarina Ellendale||1 kg
+Mandarina Zazuma||1 kg
+Manzana Red Chieff||1 kg
+Manzana roja||1 kg
+Manzana Royal Gala||1 kg
+Melón amarillo||1 kg
+Melón escrito||1 kg
+Melón orange||1 kg
+Melón piel de sapo||1 kg
+Melón reticulado||1 kg
+Naranja Valencia||1 kg
+Pera francesa||1 kg
+Pera Packams||1 kg
+Pera Williams||1 kg
+Pomelo blanco||1 kg
+Pomelo rojo||1 kg
+Sandía||1 kg
+Uva blanca||1 kg
+Uva moscatel||1 kg
+Uva negra||1 kg
+Uva rosada||1 kg`;
+const PRICED=`1|Aceite de girasol|Óptimo|900 cc|680|96|107|119
+2|Aceite de girasol|Río de la Plata|900 cc|381|99|127|146
+3|Aceite de girasol|Uruguay|900 cc|380|84|95|130
+359|Aceite de girasol|Tata|900 cc|86|87|92|115
+361|Aceite de girasol|Precio Líder|900 cc|82|89|89|93
+365|Aceite de girasol|Tienda Inglesa|900 cc|78|104|104|122
+4|Aceite de maíz|Delicia|900 cc|460|99|131|151
+5|Aceite de maíz|Río de la Plata|900 cc|376|99|145|174
+7|Aceite de soja|Condesa|900 cc|447|69|77|87
+8|Aceite de soja|Río de la Plata|900 cc|333|64.9|86|103
+10|Agua de mesa con gas|Matutina|2,5 L|500|61|65|76
+11|Agua de mesa con gas|Nativa|2,5 L|393|68|79|91
+12|Agua de mesa con gas|Salus|2,25 L|602|70|80|86
+366|Agua de mesa sin gas|Salus|2,25 L|599|70|80|86
+367|Agua de mesa sin gas|Matutina|2,5 L|458|61|65|76
+368|Agua de mesa sin gas|Vitale|2,5 L|604|64|70|78
+369|Agua en bidón|Salus|6,25 L|620|129|147|157
+370|Agua en bidón|Nativa|6 L|417|109|139.9|146
+13|Aguja vacuna||con hueso 1 kg|127|329|445|459
+14|Aguja vacuna||sin hueso 1 kg|181|299|339|485
+15|Arroz blanco|Blue Patna|1 kg|460|50|65|83
+16|Arroz blanco|Green Chef|1 kg|460|50|61|80
+17|Arroz blanco|Saman Blanco|1 kg|656|49|73.9|91
+18|Arroz blanco|Aruba tipo Patna|1 kg|214|30|45|64
+20|Arroz blanco|Vidarroz|1 kg|246|30|43|51
+22|Arvejas en conserva|Cololó|380 g|433|34|46|54
+23|Arvejas en conserva|Nidemar|300 g|131|22|26.34|49
+24|Azúcar blanco|Azucarlito|1 kg|398|44|48|59
+25|Azúcar blanco|Bella Unión|1 kg|440|46|48|62
+26|Café envasado|Águila|250 g|633|215|326|375
+27|Café envasado|Chané|250 g|643|299|405|461
+28|Café envasado|Saint|250 g|220|179|217|237
+29|Carne picada vacuna||hasta 5% de grasa 1 kg|208|329|469|549
+30|Carne picada vacuna||hasta 20% de grasa 1 kg|144|299|359|439
+31|Cerveza|Patricia|960 ml|416|145|185|205
+32|Cerveza|Pilsen|960 ml|414|138|149|193
+33|Cerveza|Zillertal|1 L|451|174|189|229
+37|Chorizos mezcla|Cattivelli Extra|1 kg|146|525|633|870
+38|Chorizos mezcla|Centenario Extra|1 kg|126|590|759|799
+39|Chorizos mezcla|La Familia hilo amarillo|1 kg|18|299|333|589
+40|Cocoa|Copacabana|500 g|660|245|320|360
+41|Cocoa|Vascolet|500 g|418|209|289|373
+48|Dulce de leche|Conaprole|1 kg|463|257|288|347
+49|Dulce de leche|Los Nietitos|1 kg|506|186.01|211|249
+50|Dulce de leche|Manjar|1 kg|507|179|205|242
+51|Dulce de membrillo|Los Nietitos|400 g|430|70|83|95
+52|Fideos secos al huevo|Adria|500 g|614|75|92|99
+53|Fideos secos al huevo|Cololó|500 g|343|63|76|83
+54|Fideos secos al huevo|Las Acacias|500 g|488|65|87|99
+55|Fideos secos semolados|Adria|500 g|230|46|52|79
+56|Fideos secos semolados|Las Acacias franja celeste|500 g|216|44|64.9|78
+58|Frankfurters cortos|Centenario|8 un.|151|175|229|309
+59|Frankfurters cortos|Ottonello|8 un.|394|169|229|250
+60|Frankfurters cortos|Schneck|8 un.|474|219|290|340
+61|Galletitas al agua|Famosa|140 g|569|68|87|101
+62|Galletitas al agua|Maestro Cubano|120 g|86|37|40|47
+63|Gaseosa cola|Coca Cola|1,5 L|646|135|150|167
+64|Gaseosa cola|Coca Cola|2,25 L|547|150|194|210
+66|Gaseosa cola|Pepsi|2 L|428|131.6|182|199
+67|Gaseosa cola|Pepsi|1,5 L|477|99|137|160
+68|Hamburguesas de carne vacuna|Burgy|3 un.|404|35|45|59.9
+69|Hamburguesas de carne vacuna|Paty|2 un.|79|55|85|109
+70|Hamburguesas de carne vacuna|Schneck|2 un.|482|84|105|119
+71|Harina de maíz|Gourmet|450 g|159|29|33|40
+72|Harina de maíz|Presto Pronta Arcor|500 g|401|49|58|63
+73|Harina de maíz|Puritas|450 g|458|30|39.9|49
+74|Harina de trigo 000|Cañuelas|1 kg|619|40|53|65
+75|Harina de trigo 000|Cololó|1 kg|160|42|49|63
+76|Harina de trigo 0000|Cañuelas|1 kg|648|45|60|74
+77|Harina de trigo 0000|Cololó|1 kg|404|45|57|81
+78|Harina de trigo 0000|Primor|1 kg|236|49|57|65
+358|Harina de trigo 0000|Tata|1 kg|86|40|57|57
+360|Harina de trigo 0000|Precio Líder|1 kg|82|55|55|55
+363|Harina de trigo 0000|Granja La Sonrisa|1 kg|77|45.9|53|59.9
+364|Harina de trigo 0000|Tienda Inglesa|1 kg|78|53|59|66
+79|Helado familiar|Conaprole|1 L|491|247|301|335
+80|Helado familiar|Crufi|1 L|376|225|311.67|376
+85|Huevos colorados|El Jefe|1/2 docena|97|99|113|133.39
+86|Huevos colorados|Prodhin|1/2 docena|311|110|124|133
+87|Huevos colorados|Super huevo|1/2 docena|317|99|122|133.39
+97|Jamón cocido no artesanal|Cattivelli|1 kg|33|550|880|1090
+98|Jamón cocido no artesanal|Ottonello|1 kg|191|553.2|690|799
+100|Leonesa|Ottonello|1 kg|52|415|490|670
+101|Leonesa|Schneck|1 kg|218|530|730|850
+103|Manteca|Conaprole sin sal|200 g|601|97|111|128
+104|Manteca|Kasdorf|200 g|313|98|109|119
+105|Margarina|Doriana nueva|250 g|115|55|82|120
+380|Margarina|Adorita|250 g|375|31|55|62
+381|Margarina|Qualy|250 g|334|35|62|75
+109|Mayonesa común|Hellmans|500 g|596|94.5|129|155
+110|Mayonesa común|Uruguay|500 g|674|79|109|150
+112|Mermelada de durazno|El Hogar|500 g|122|69|89|132
+113|Mermelada de durazno|Los Nietitos|500 g|505|110|137|155
+114|Nalga vacuna||con hueso 1 kg|27|319|566|599
+115|Nalga vacuna||sin hueso 1 kg|186|399|429|617.74
+116|Paleta vacuna||con hueso 1 kg|145|339|455|479
+117|Paleta vacuna||sin hueso 1 kg|201|299|359|502
+118|Pan de molde lacteado|Los Sorchantes|330 g|412|99|126|149.9
+119|Pan de molde lacteado|Bimbo|330 g|297|109|143|165
+121|Pan flauta||unidad aprox. 215 g|103|49|59|106
+128|Peceto vacuno||1 kg|205|399|439|617
+130|Pollo entero fresco con menudos|Avícola del Oeste|1 kg|198|148.5|199|229
+132|Pollo entero fresco con menudos|Tres Arroyos|1 kg|32|129|209|239
+133|Pulpa de tomate|Conaprole|1 L|635|86|100|110
+134|Pulpa de tomate|De Ley|1,02 L|457|56.7|79|127
+135|Pulpa de tomate|Gourmet|1 L|635|65|99|113
+136|Queso rallado|Artesano|80 g|248|132|159|185
+137|Queso rallado|Conaprole|80 g|501|99|112|140
+138|Queso rallado|Milky|80 g|261|78|114|132
+139|Rueda vacuna||con hueso 1 kg|22|379|537|557
+140|Sal fina yodada fluorada|Sek|500 g|342|43|60|91
+141|Sal fina yodada fluorada|Torrevieja|500 g|108|39|57|64.9
+142|Sal fina yodada fluorada|Urusal|500 g|485|47|56|81
+143|Té negro en saquitos|Hornimans|10 un.|462|39|49|63
+144|Té negro en saquitos|La Virginia|10 un.|604|36|42|50.99
+145|Té negro en saquitos|President|10 un.|399|39.9|75|89
+146|Vino tinto común tetrabrick|Faisón|1 L|500|118|134.93|158
+147|Vino tinto común tetrabrick|Santa Teresa Clásico|1 L|501|129|148|170
+148|Vino tinto común tetrabrick|Tango|1 L|148|105|109|117
+149|Yerba mate común|Baldo|1 kg|690|175|196|249.14
+150|Yerba mate común|Canarias|1 kg|645|175|198|275
+151|Yerba mate común|Del Cebador|1 kg|457|152|184|225
+152|Yogur|Calcar|1 L|314|78|98|107
+153|Yogur|Conaprole BIO TOP|1,2 L|426|82|97|114
+154|Yogur|Parmalat Bio Yogur|1 L|159|53|93|103
+318|Afeitadora|Gillette Mach3|2 un.|501|399|565|653
+319|Afeitadora|Xtreme3|1 un.|577|63|116|163
+347|Alcohol en gel|Bioset|250 ml|144|99|142|159
+346|Alcohol rectificado|Droguería Paysandú|250 ml|19|77|80|92
+348|Algodón|Zig Zag Cisne|100 g|643|103|123|188
+34|Champú|Fructis|350 ml|556|231|395|434
+35|Champú|Sedal|350 ml|221|183|227|256
+36|Champú|Suave|930 ml|410|138|185|235
+320|Champú|Dove|400 ml|593|382|468|540
+321|Champú|Pantene|400 ml|634|367.5|515|546
+350|Curitas|Ready Plast|8 un.|456|45|60|79
+42|Desodorante en aerosol|Axe Musk|113 g|739|164|204|239
+43|Desodorante en aerosol|Dove Original|100 g|737|204|248|302
+44|Desodorante en aerosol|Rexona Active Emotion|105 g|679|185|220|258
+88|Jabón de tocador|Astral plata|125 g|743|35.7|51|69
+89|Jabón de tocador|Palmolive|125 g|542|31.5|41|49
+90|Jabón de tocador|Rexona|125 g|470|32.9|45|62
+324|Jabón de tocador|Neutrogena|80 g|327|141|185|197.073
+338|Jabón de tocador|Dove blanco|90 g|738|56.7|77|89
+327|Pañales|Babysec Premium XXG|48 un.|668|950|1240|1347
+328|Pañales|Huggies Primeros 100 Días Pequeño|40 un.|437|509.6|785|921.23
+326|Pañales adultos|Readysec Grande|24 un.|363|639.9|894|899
+122|Papel higiénico hoja simple|Elite|4 rollos de 30 m|497|80|115|139
+123|Papel higiénico hoja simple|Higienol Export|4 rollos de 30 m|485|50|64.9|86
+124|Papel higiénico hoja simple|Sin Fin|4 rollos de 50 m|483|117|137|179
+125|Pasta dental|Colgate Herbal Blanqueador|90 g|485|49|83|89.9
+126|Pasta dental|Kolynos Triple acción|90 g|606|33|43|54
+127|Pasta dental|Pico Jenner Plus|90 g|110|37|55|69.9
+335|Talco|Xanapie bolsa repuesto|180 g|439|89.9|108|140
+337|Talco|J&J regular|200 g|406|285|469|557.359
+332|Toallitas femeninas|Ladysoft Básica|16 un.|683|89|113|224
+333|Toallitas femeninas|Siempre Libre Nocturna Max con alas|8 un.|394|95.4|160|210
+257|Banana Brasil||1 kg|97|54|69|77
+255|Banana Ecuador||1 kg|139|99|125|165
+238|Lechuga crespa||1 un.|144|29|59|87
+239|Lechuga mantecosa||1 un.|132|30|59|65
+275|Manzana Fuji||1 kg|106|108|133|189
+276|Manzana Granny Smith||1 kg|105|75|129|168
+277|Manzana Red Deliciosa||1 kg|219|99|129|152
+286|Naranja Navel||1 kg|107|35|59|59
+244|Papa blanca||1 kg|165|55|109|137
+245|Papa rosada||1 kg|142|39|79|103
+253|Tomate americano||1 kg|173|99|169|229.9
+254|Tomate perita||1 kg|131|135|229|279.9
+262|Zapallo calabacín||1 kg|35|33|59|77
+264|Zapallo criollo||1 kg|35|40|73|80
+45|Detergente para vajilla|Deterjane limón|1,25 L|369|129|149|177
+46|Detergente para vajilla|Hurra Nevex limón|1,25 L|599|124|145|185.59
+47|Detergente para vajilla|Protergente limón|1 L|455|59|76|90
+82|Lavandina (hipoclorito de sodio)|Agua Jane|1 L|656|64.23|89.21|112
+83|Lavandina (hipoclorito de sodio)|Sello Rojo|1 L|640|62.28|82|102
+84|Lavandina (hipoclorito de sodio)|Solución Cristal|1 L|490|56|84.9|93
+91|Jabón en polvo máquina|Drive|800 g|147|121|156|178.53
+92|Jabón en polvo máquina|Nevex|800 g|643|99.9|188|229.57
+93|Jabón en polvo máquina|Skip paquete azul|800 g|624|132|153|182.53
+94|Jabón para ropa en barra|Bull Dog|300 g|467|43|91|99
+95|Jabón para ropa en barra|Nevex|200 g|348|50|63|72.2
+96|Jabón para ropa en barra|Primor|200 g|507|35|39|49.9`;
+const REFMES='2026-08';
+const EXTRAS=`Leche entera|Conaprole|1 L
+Leche entera|Parmalat|1 L
+Leche entera|Calcar|1 L
+Huevos colorados||docena
+Lentejas||500 g
+Porotos||500 g
+Garbanzos||500 g`;
+const mnorm=s=>norm(s).replace(/,/g,'.').replace(/(\d)\s+(kg|grs|gr|g|lts|lt|l|ml|cc)\b/g,'$1$2');
+let baseItems=null,sugList=[],sugRow=null,pending=false,onT=null,onCtl=null;
+const onCache={};
+const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const mesTxt=m=>{const [y,mm]=m.split('-');return MESES[+mm-1]+' '+y;};
+const mesCorto=m=>{const [y,mm]=m.split('-');return MESES[+mm-1].slice(0,3)+' '+y;};
+let embMap=null,refIdx=null;
+function embedded(){
+  if(!embMap){
+    embMap={};
+    PRICED.split('\n').forEach(l=>{
+      const [id,n,m,p,N,p1,med,p99]=l.split('|');
+      embMap[id]={n,m,p,N:+N,p1:+p1,med:+med,p99:+p99};
+    });
+  }
+  return embMap;
+}
+function refMes(){return S.ref?S.ref.mes:REFMES;}
+function pricedItems(){
+  const emb=embedded(),over=S.ref?S.ref.items:null,ids=new Set(Object.keys(emb));
+  if(over)Object.keys(over).forEach(i=>ids.add(i));
+  const out=[];
+  ids.forEach(id=>{
+    const e=emb[id],o=over?over[id]:null;
+    const names=e||o; if(!names)return;
+    const num=over?o:e; // con planilla cargada, solo hay precio si viene en ella
+    out.push({label:[names.n,names.m,names.p].filter(Boolean).join(' '),m:names.m||'',src:'sipc',
+      ref:num?{id,med:num.med,p1:num.p1,p99:num.p99,N:num.N,mes:refMes()}:null});
+  });
+  return out;
+}
+function refIndex(){
+  if(!refIdx){refIdx=new Map();pricedItems().forEach(it=>{if(it.ref)refIdx.set(mnorm(it.label),it.ref);});}
+  return refIdx;
+}
+function baseItemsList(){
+  if(!baseItems){
+    baseItems=[];
+    SIPC.split('\n').forEach(l=>{
+      const [n,m,p]=l.split('|');
+      baseItems.push({label:[n,m,p].filter(Boolean).join(' '),m:m||'',src:'sipc',ref:null});
+    });
+    EXTRAS.split('\n').forEach(l=>{
+      const [n,m,p]=l.split('|');
+      baseItems.push({label:[n,m,p].filter(Boolean).join(' '),m:m||'',src:'cat',ref:null});
+    });
+  }
+  return baseItems.concat(pricedItems());
+}
+function parseCustom(){
+  return (S.custom||'').split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{
+    const p=l.split('|').map(x=>x.trim());
+    return {label:[p[0],p[1],p[2]].filter(Boolean).join(' '),m:p[1]||'',src:'cat',ref:refIndex().get(mnorm([p[0],p[1],p[2]].filter(Boolean).join(' ')))||null};
+  });
+}
+function histItems(){
+  const m=new Map();
+  S.records.slice().sort((a,b)=>b.fecha.localeCompare(a.fecha)||b.t-a.t).forEach(r=>{
+    const k=norm(r.articulo);if(!m.has(k))m.set(k,{label:r.articulo,m:r.marca||'',src:'hist',ref:refIndex().get(mnorm(r.articulo))||null});
+  });
+  return [...m.values()];
+}
+function localMatches(q){
+  const toks=mnorm(q).split(' ').filter(Boolean);
+  if(!toks.length)return [];
+  const seen=new Set(),out=[];
+  [histItems(),parseCustom(),baseItemsList()].forEach(list=>list.forEach(it=>{
+    const hay=mnorm(it.label+' '+(it.m||'')).split(' ');
+    if(!toks.every(t=>hay.some(w=>w.startsWith(t))))return;
+    const k=mnorm(it.label);if(seen.has(k))return;seen.add(k);out.push(it);
+  }));
+  const rank=it=>it.src==='hist'?0:((mnorm(it.label).startsWith(toks[0])?1:2)+(it.ref?0:0.5));
+  return out.sort((a,b)=>rank(a)-rank(b));
+}
+async function fetchOnline(q){
+  const k=mnorm(q);
+  if(onCache[k])return onCache[k];
+  try{
+    if(onCtl)onCtl.abort();
+    onCtl=new AbortController();
+    const to=setTimeout(()=>onCtl.abort(),4500);
+    const u='https://uy.openfoodfacts.org/cgi/search.pl?search_terms='+encodeURIComponent(q)+'&search_simple=1&action=process&json=1&page_size=8&fields=product_name,brands,quantity';
+    const r=await fetch(u,{signal:onCtl.signal});clearTimeout(to);
+    const j=await r.json();
+    const out=(j.products||[]).map(p=>{
+      const name=(p.product_name||'').trim();if(!name)return null;
+      const m=(p.brands||'').split(',')[0].trim(),qty=(p.quantity||'').trim();
+      let label=name;
+      if(m&&!mnorm(name).includes(mnorm(m)))label+=' '+m;
+      if(qty&&!mnorm(name).includes(mnorm(qty)))label+=' '+qty;
+      return {label,m,src:'web'};
+    }).filter(Boolean);
+    onCache[k]=out;return out;
+  }catch(e){return [];}
+}
+function hideSug(){document.querySelectorAll('.sug').forEach(b=>b.hidden=true);sugList=[];}
+function renderSug(row,extra){
+  const box=row.querySelector('.sug'),q=row.querySelector('.art').value;
+  if(mnorm(q).length<2){hideSug();return;}
+  let list=localMatches(q);
+  if(extra){
+    const seen=new Set(list.map(i=>mnorm(i.label)));
+    extra.forEach(i=>{const k=mnorm(i.label);if(!seen.has(k)){seen.add(k);list.push(i);}});
+  }
+  list=list.slice(0,8);sugList=list;sugRow=row;
+  const store=$('#almacen').value.trim(),f=$('#fecha').value||today();
+  let html=list.map((it,i)=>{
+    const prev=store?lastRecord(store,it.label,f):null;
+    const tag=it.src==='hist'?(prev?'último '+money(prev.precio):(it.ref?'SIPC '+money(it.ref.med):'tuyo')):(it.ref?'SIPC '+money(it.ref.med):(it.src==='web'?'online':(it.src==='sipc'?'SIPC':'catálogo')));
+    return '<div class="si" role="option" data-i="'+i+'"><span>'+esc(it.label)+'</span><small>'+tag+'</small></div>';
+  }).join('');
+  if(pending)html+='<div class="si nota">Buscando en línea…</div>';
+  else if(!list.length)html='<div class="si nota">Producto nuevo: se guardará con este nombre y la próxima vez te lo sugiere.</div>';
+  box.innerHTML=html;box.hidden=false;
+}
+function onArtInput(row){
+  row.dataset.marca='';row.dataset.auto='0';row.querySelector('.pre').classList.remove('auto');
+  const q=row.querySelector('.art').value,k=mnorm(q);
+  clearTimeout(onT);pending=false;
+  if(S.cfg.online&&k.length>=3&&onCache[k]){renderSug(row,onCache[k]);return;}
+  renderSug(row);
+  if(!S.cfg.online||k.length<3)return;
+  onT=setTimeout(async()=>{
+    pending=true;renderSug(row);
+    const res=await fetchOnline(q);
+    pending=false;
+    if(row.querySelector('.art').value===q)renderSug(row,res);
+  },400);
+}
+function pickSug(i){
+  const it=sugList[i],row=sugRow;if(!it||!row)return;
+  row.querySelector('.art').value=it.label;row.dataset.marca=it.m||'';
+  const rf=it.ref||refIndex().get(mnorm(it.label)),pre=row.querySelector('.pre');
+  if(rf){pre.value=rf.med;row.dataset.auto='1';pre.classList.add('auto');}
+  else{row.dataset.auto='0';pre.classList.remove('auto');}
+  hideSug();pre.focus();pre.select();updateHint(row);
+}
+
+/* ---------- actualización de precios de referencia (SIPC) ---------- */
+const EXCL=/perfume|protector solar|repelente|tinta|crema facial|cinta adhesiva|glicerina|gasa|talco aerosol/i;
+function cleanPres(t){
+  return String(t).replace(/^(envase|paquete|bolsa|botella|unidad|sachet|caja|lata)\s*/i,'')
+    .replace(/\bgrs?\.?/gi,'g').replace(/\blts?\.?/gi,'L').replace(/\bkg\./gi,'kg').replace(/\bmts\.?/gi,'m')
+    .replace(/\bus\.?$/i,'un.').replace(/\s+/g,' ').replace(/\.$/,'').trim();
+}
+function parseSipcCsv(buf){
+  let txt;
+  try{txt=new TextDecoder('utf-8',{fatal:true}).decode(buf);}catch(e){txt=new TextDecoder('windows-1252').decode(buf);}
+  const lines=txt.split(/\r?\n/).filter(l=>l.trim());
+  const head=lines[0].split(';').map(h=>h.trim().toLowerCase());
+  const ix=n=>head.indexOf(n);
+  const c={id:ix('id.presentacion'),prod:ix('producto'),mar:ix('marca'),esp:ix('especificacion'),n:ix('n'),p1:ix('pmin'),med:ix('pmediano'),p99:ix('pmax')};
+  if(Object.values(c).some(v=>v<0))throw new Error('formato');
+  const num=v=>parseFloat(String(v).replace(/\./g,'').replace(',','.'));
+  const num2=v=>{const x=String(v).trim();return x.indexOf(',')>=0?parseFloat(x.replace(/\./g,'').replace(',','.')):parseFloat(x);};
+  const items={};
+  lines.slice(1).forEach(l=>{
+    const f=l.split(';');
+    const id=f[c.id].trim(),med=num2(f[c.med]);
+    if(!id||isNaN(med))return;
+    const emb=embedded()[id];
+    const prod=f[c.prod].trim();
+    if(!emb&&EXCL.test(prod))return;
+    const mar=/sin marca/i.test(f[c.mar])?'':f[c.mar].trim();
+    items[id]={n:emb?emb.n:prod.replace(/\s*\(.*?\)\s*/g,' ').trim(),m:emb?emb.m:mar,p:emb?emb.p:cleanPres(f[c.esp]),
+      N:parseInt(f[c.n])||0,p1:num2(f[c.p1]),med,p99:num2(f[c.p99])};
+  });
+  if(!Object.keys(items).length)throw new Error('vacío');
+  return items;
+}
+function applyRef(items,mes){
+  S.ref={mes,items};refIdx=null;baseItems=null;save();refreshAll();
+  toast('Precios de referencia actualizados: '+mesTxt(mes));
+}
+function mesDeArchivo(name){
+  const m=String(name).toLowerCase().match(/_([a-zñ]+)_(\d{4})/);
+  if(m){const i=MESES.indexOf(m[1]);if(i>=0)return m[2]+'-'+pad(i+1);}
+  return null;
+}
+function loadRefFile(file){
+  if(!file)return;
+  const fr=new FileReader();
+  fr.onload=e=>{
+    try{
+      const items=parseSipcCsv(e.target.result);
+      let mes=mesDeArchivo(file.name);
+      if(!mes){mes=(prompt('¿De qué mes son estos precios? (formato 2026-09)',today().slice(0,7))||'').trim();}
+      if(!/^\d{4}-\d{2}$/.test(mes)){toast('Mes inválido');return;}
+      applyRef(items,mes);
+    }catch(err){toast('Ese archivo no parece una planilla de precios del SIPC');}
+  };
+  fr.readAsArrayBuffer(file);
+}
+async function updateRefOnline(){
+  const btn=$('#refUpd');btn.disabled=true;btn.textContent='Buscando…';
+  const now=new Date();let ok=false;
+  try{
+    for(let back=1;back<=3&&!ok;back++){
+      const d=new Date(now.getFullYear(),now.getMonth()-back,1);
+      const y=d.getFullYear(),mi=d.getMonth(),mes=y+'-'+pad(mi+1);
+      if(S.ref&&S.ref.mes>=mes&&back>1)break;
+      const pub=new Date(y,mi+1,1);
+      const url='https://www.precios.uy/wp-content/uploads/'+pub.getFullYear()+'/'+pad(pub.getMonth()+1)+'/precios_'+MESES[mi]+'_'+y+'.csv';
+      try{
+        const r=await fetch(url);
+        if(!r.ok)continue;
+        applyRef(parseSipcCsv(await r.arrayBuffer()),mes);ok=true;
+      }catch(e){}
+    }
+  }finally{btn.disabled=false;btn.textContent='Actualizar desde precios.uy';}
+  if(!ok)toast('No pude traer la planilla desde acá. Descargala en precios.uy y cargala con «Cargar planilla CSV».');
+}
+
+/* ---------- historial ---------- */
+function renderHist(){
+  if(!S.records.length){$('#hist').innerHTML='<div class="empty">Sin compras todavía.</div>';return;}
+  const g=new Map();
+  S.records.forEach(r=>{const k=r.fecha+'|'+norm(r.almacen);if(!g.has(k))g.set(k,{fecha:r.fecha,store:r.almacen,rs:[]});g.get(k).rs.push(r);});
+  const list=[...g.values()].sort((a,b)=>b.fecha.localeCompare(a.fecha)||a.store.localeCompare(b.store));
+  $('#hist').innerHTML=list.map(x=>{
+    const tot=x.rs.reduce((a,r)=>a+r.precio*r.cantidad,0);
+    return '<div class="slip hgroup"><div class="hh"><div><b>'+esc(x.store)+'</b><div class="mute small">'+fmtF(x.fecha)+' · total anotado '+money(tot)+'</div></div><button class="mini" data-delg="'+x.rs.map(r=>r.id).join(',')+'" aria-label="Borrar compra completa">🗑</button></div>'+
+      '<table>'+x.rs.map(r=>'<tr><td>'+esc(r.articulo)+'</td><td class="n">'+r.cantidad+' × '+money(r.precio)+'</td><td style="width:40px"><button class="mini" data-del="'+r.id+'" aria-label="Borrar renglón">×</button></td></tr>').join('')+'</table></div>';
+  }).join('');
+}
+
+/* ---------- Excel / CSV ---------- */
+function sortedRecords(){return S.records.slice().sort((a,b)=>a.fecha.localeCompare(b.fecha)||a.t-b.t);}
+function buildTables(){
+  const A=analyze().sort((a,b)=>a.store.localeCompare(b.store)||a.name.localeCompare(b.name));
+  const lv=['OK','BAJA','MEDIA','ALTA'];
+  const r1=n=>Math.round(n*10)/10;
+  const compras=[['Fecha','Almacén','Artículo','Marca','Cantidad','Precio almacén','Referencia SIPC','Mes referencia','Dif. vs referencia %','Total']].concat(
+    sortedRecords().map(r=>[r.fecha,r.almacen,r.articulo,r.marca||'',r.cantidad,r.precio,r.ref!==undefined?r.ref:'',r.refMes||'',r.ref?r1((r.precio/r.ref-1)*100):'',Math.round(r.cantidad*r.precio*100)/100]));
+  const comp=[['Almacén','Artículo','Marca','Primera fecha','Primer precio','Última fecha','Último precio','Referencia SIPC','Mes referencia','Dif. vs referencia %','Tope SIPC (99%)','Variación %','Mercado esperado %','Exceso (puntos)','Subidas','Bajadas','Nivel','Detalle']].concat(
+    A.map(s=>[s.store,s.name,s.last.marca||'',s.first.fecha,s.first.precio,s.last.fecha,s.last.precio,s.ref?s.ref.med:'',s.ref?s.ref.mes:'',s.ref?r1(s.refDiff):'',s.ref?s.ref.p99:'',r1(s.total),r1(s.expTotal),r1(s.excTotal),s.ups,s.downs,lv[s.level],s.flags.map(f=>f.txt).join(' | ')]));
+  const ale=[['Nivel','Almacén','Artículo','Último precio','Variación %','Detalle']].concat(
+    A.filter(s=>s.level>=1).sort((a,b)=>b.level-a.level).map(s=>[lv[s.level],s.store,s.name,s.last.precio,r1(s.total),s.flags.map(f=>f.txt).join(' | ')]));
+  return {compras,comp,ale};
+}
+function exportXlsx(){
+  if(!S.records.length){toast('No hay compras para exportar');return;}
+  if(typeof XLSX==='undefined'){toast('No cargó la librería de Excel (¿sin internet?). Probá con CSV.');return;}
+  const T=buildTables(),wb=XLSX.utils.book_new();
+  [['Compras',T.compras,[12,22,28,16,10,15,15,14,18,12]],['Comparación',T.comp,[22,28,16,13,13,13,13,15,14,18,14,12,18,15,9,9,8,70]],['Alertas',T.ale,[8,22,28,13,12,80]]].forEach(([n,rows,w])=>{
+    const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=w.map(x=>({wch:x}));XLSX.utils.book_append_sheet(wb,ws,n);
+  });
+  XLSX.writeFile(wb,'revelador-de-chantas.xlsx');
+  toast('Excel descargado');
+}
+function exportCsv(){
+  if(!S.records.length){toast('No hay compras para exportar');return;}
+  const q=v=>'"'+String(v).replace(/"/g,'""')+'"';
+  const csv='\ufeff'+buildTables().compras.map(r=>r.map(q).join(';')).join('\r\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download='revelador-de-chantas.csv';document.body.appendChild(a);a.click();a.remove();
+}
+function parseFecha(v){
+  if(typeof v==='number'&&typeof XLSX!=='undefined'){const o=XLSX.SSF.parse_date_code(v);if(o)return o.y+'-'+pad(o.m)+'-'+pad(o.d);}
+  v=String(v).trim();
+  let m=v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);if(m)return m[1]+'-'+pad(m[2])+'-'+pad(m[3]);
+  m=v.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+  if(m){const y=m[3].length===2?'20'+m[3]:m[3];return y+'-'+pad(m[2])+'-'+pad(m[1]);}
+  return null;
+}
+function num(v){return parseFloat(String(v).replace(/\./g,'').replace(',','.'))||parseFloat(String(v).replace(',','.'));}
+function importRows(rows){
+  const have=new Set(S.records.map(r=>[r.fecha,norm(r.almacen),norm(r.articulo),r.precio,r.cantidad].join('|')));
+  let added=0,skipped=0,t=Date.now();
+  rows.forEach(r=>{
+    const g=k=>{const key=Object.keys(r).find(x=>norm(x)===norm(k));return key===undefined?'':r[key];};
+    const fecha=parseFecha(g('Fecha')),store=String(g('Almacén')||g('Almacen')).trim(),art=String(g('Artículo')||g('Articulo')).trim();
+    const pre=typeof g('Precio unitario')==='number'?g('Precio unitario'):num(g('Precio unitario'));
+    const canRaw=g('Cantidad'),can=canRaw===''?1:(typeof canRaw==='number'?canRaw:num(canRaw))||1;
+    if(!fecha||!store||!art||isNaN(pre)||pre<=0){skipped++;return;}
+    const k=[fecha,norm(store),norm(art),pre,can].join('|');
+    if(have.has(k)){skipped++;return;}
+    have.add(k);S.records.push({id:uid(),t:t++,fecha,almacen:store,articulo:art,marca:String(g('Marca')||'').trim(),cantidad:can,precio:pre});added++;
+  });
+  save();refreshAll();
+  toast(added+' registros nuevos'+(skipped?' · '+skipped+' ya estaban o eran inválidos':''));
+}
+function importFile(file){
+  if(!file)return;
+  if(typeof XLSX==='undefined'){toast('No cargó la librería de Excel (¿sin internet?)');return;}
+  const fr=new FileReader();
+  fr.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets['Compras']||wb.Sheets[wb.SheetNames[0]];
+      importRows(XLSX.utils.sheet_to_json(ws,{defval:''}));
+    }catch(err){toast('No pude leer ese archivo');}
+  };
+  fr.readAsArrayBuffer(file);
+}
+
+/* ---------- datos de ejemplo ---------- */
+function loadSample(){
+  if(S.records.length&&!confirm('Se van a sumar datos de ejemplo a lo que ya tenés. ¿Seguir?'))return;
+  const offs=[56,42,28,14,0];
+  const data={
+    'Almacén Don Pepe':{'Arroz 1 kg':[62,66,71,77,84],'Aceite 900 ml':[118,118,120,120,121],'Fideos 500 g':[48,48,49,49,50],'Yerba 1 kg':[215,215,218,218,220],'Leche 1 L':[46,46,47,47,47]},
+    'Super Barrio':{'Arroz 1 kg':[63,63,64,64,65],'Aceite 900 ml':[119,119,121,121,122],'Fideos 500 g':[47,48,48,49,49],'Yerba 1 kg':[212,214,214,216,217],'Leche 1 L':[46,46,46,47,47]}
+  };
+  let t=Date.now();
+  Object.entries(data).forEach(([st,arts])=>Object.entries(arts).forEach(([a,prices])=>prices.forEach((p,i)=>{
+    const d=new Date();d.setDate(d.getDate()-offs[i]);
+    S.records.push({id:uid(),t:t++,fecha:isoDate(d),almacen:st,articulo:a,cantidad:1,precio:p});
+  })));
+  save();refreshAll();toast('Datos de ejemplo cargados: mirá «Comparar»');
+}
+
+/* ---------- ajustes y navegación ---------- */
+function refreshSettings(){
+  $('#refInfo').textContent='SIPC (Ministerio de Economía), mediana de '+mesTxt(refMes())+(S.ref?' · planilla cargada por vos':' · incluida en la app')+'.';
+  $('#cOnline').checked=S.cfg.online!==false;$('#cCat').value=S.custom||'';$('#cRef').value=S.cfg.ref;$('#cTol').value=S.cfg.tol;$('#cMed').checked=S.cfg.useMedian;
+  const m=medianRate();
+  $('#medInfo').textContent=m===null?'Con tus datos todavía no se puede estimar (hacen falta compras separadas por al menos 7 días).':'Según tus datos, los precios suben una mediana de '+m.toFixed(1).replace('.',',')+'% por mes.';
+}
+function refreshAll(){refreshLists();renderCompare();renderHist();refreshSettings();}
+function showTab(id){
+  document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===id)));
+  document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id==='s-'+id));
+  if(id==='comparar')renderCompare();
+  window.scrollTo({top:0});
+}
+
+/* ---------- eventos ---------- */
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+$('#addRow').onclick=()=>addRow(true);
+$('#saveBtn').onclick=saveCompra;
+$('#rows').addEventListener('input',e=>{const r=e.target.closest('.row');if(r)updateHint(r);});
+$('#rows').addEventListener('input',e=>{if(e.target.classList.contains('art'))onArtInput(e.target.closest('.row'));});
+$('#rows').addEventListener('input',e=>{if(e.target.classList.contains('pre')){const r=e.target.closest('.row');r.dataset.auto='0';e.target.classList.remove('auto');}});
+$('#rows').addEventListener('click',e=>{const si=e.target.closest('.si[data-i]');if(si)pickSug(+si.dataset.i);});
+$('#rows').addEventListener('keydown',e=>{
+  if(!e.target.classList.contains('art'))return;
+  const box=e.target.closest('.row').querySelector('.sug'),els=[...box.querySelectorAll('.si[data-i]')];
+  if(box.hidden||!els.length)return;
+  let cur=els.findIndex(x=>x.classList.contains('on'));
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+    e.preventDefault();cur=e.key==='ArrowDown'?Math.min(cur+1,els.length-1):Math.max(cur-1,0);
+    els.forEach((x,i)=>x.classList.toggle('on',i===cur));els[cur].scrollIntoView({block:'nearest'});
+  }else if(e.key==='Enter'&&cur>=0){e.preventDefault();pickSug(cur);}
+  else if(e.key==='Escape')hideSug();
+});
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('.artw'))hideSug();});
+$('#rows').addEventListener('change',e=>{const r=e.target.closest('.row');if(r)updateHint(r);});
+$('#rows').addEventListener('click',e=>{
+  if(e.target.classList.contains('x')){
+    const rows=document.querySelectorAll('#rows .row');
+    if(rows.length>1)e.target.closest('.row').remove();
+    else{const r=e.target.closest('.row');r.querySelectorAll('input').forEach(i=>i.value=i.classList.contains('can')?'1':'');r.querySelector('.hint').innerHTML='';r.dataset.marca='';r.dataset.auto='0';r.querySelector('.pre').classList.remove('auto');hideSug();}
+  }
+});
+$('#rows').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList.contains('pre')){e.preventDefault();addRow(true);}});
+['almacen','fecha'].forEach(id=>$('#'+id).addEventListener('input',()=>document.querySelectorAll('#rows .row').forEach(updateHint)));
+$('#fStore').onchange=e=>{cmpStore=e.target.value;renderCompare();};
+$('#fOnly').onchange=e=>{cmpOnly=e.target.checked;renderCompare();};
+$('#hist').addEventListener('click',e=>{
+  const one=e.target.dataset.del,grp=e.target.dataset.delg;
+  if(one){S.records=S.records.filter(r=>r.id!==one);save();refreshAll();}
+  else if(grp&&confirm('¿Borrar esta compra completa?')){const ids=new Set(grp.split(','));S.records=S.records.filter(r=>!ids.has(r.id));save();refreshAll();}
+});
+$('#expX').onclick=exportXlsx;
+$('#expC').onclick=exportCsv;
+$('#impBtn').onclick=()=>$('#impFile').click();
+$('#impFile').onchange=e=>{importFile(e.target.files[0]);e.target.value='';};
+$('#cRef').onchange=e=>{S.cfg.ref=Math.max(0,parseFloat(e.target.value)||0);save();refreshAll();};
+$('#cTol').onchange=e=>{S.cfg.tol=Math.max(0,parseFloat(e.target.value)||0);save();refreshAll();};
+$('#cMed').onchange=e=>{S.cfg.useMedian=e.target.checked;save();refreshAll();};
+$('#refUpd').onclick=updateRefOnline;
+$('#refCsv').onclick=()=>$('#refFile').click();
+$('#refFile').onchange=e=>{loadRefFile(e.target.files[0]);e.target.value='';};
+$('#cOnline').onchange=e=>{S.cfg.online=e.target.checked;save();};
+$('#cCat').onchange=e=>{S.custom=e.target.value;save();toast('Catálogo guardado');};
+$('#sample').onclick=loadSample;
+$('#wipe').onclick=()=>{if(confirm('Esto borra todas las compras guardadas en este navegador. ¿Seguro?')){S.records=[];save();refreshAll();toast('Datos borrados');}};
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')$('#modal').classList.remove('on');});
+
+/* ---------- instalación como app ---------- */
+if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
+if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
+
+/* ---------- inicio ---------- */
+load();
+$('#fecha').value=today();
+addRow(false);
+refreshAll();
+</script>
+</body>
+</html>
